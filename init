@@ -1,0 +1,35 @@
+#!/bin/sh
+
+echo "<============BusyImage============>"
+echo "1. root"
+echo "2. Add a user"
+echo -n ": "
+read choice
+
+case "$choice" in
+  1)
+    user="root"
+    echo "Logging in as root..."
+    export USER=$user
+    export HOME="/usr/$user"
+    cd usr/root
+    exec sh
+    ;;
+  2)
+    echo -n "Enter new username: "
+    read newuser
+    # Create home directory for new user
+    mkdir -p "/usr/$newuser"
+    echo "User '$newuser' created."
+    export USER=$newuser
+    export HOME="/usr/$newuser"
+    cd "$HOME"
+    exec sh
+    ;;
+  *)
+    echo "Invalid choice."
+    sleep 1
+    exec "$0"
+    ;;
+esac
+

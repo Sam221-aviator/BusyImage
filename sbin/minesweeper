@@ -1,0 +1,170 @@
+#!/bin/bash
+
+# Board size
+WIDTH=5
+HEIGHT=5
+MINES=5
+
+# Create arrays for board and revealed cells
+board=()
+revealed=()
+
+# Helper: convert coords like A3 to index
+coord_to_index() {
+    row=$(echo "$1" | sed -E 's/[A-Z]//')
+    col=$(echo "$1" | sed -E 's/[0-9]//')
+    # Convert col letter to number (A=0)
+    col_num=$(printf "%d" "'$col")
+    col_num=$((col_num - 65))
+    row_num=$((row - 1))
+    echo $((row_num * WIDTH + col_num))
+}
+
+# Initialize board with mines and numbers
+init_board() {
+    # Fill board with 0s
+    for i in $(seq 0 $((WIDTH*HEIGHT-1))); do
+        board[$i]=0
+        revealed[$i]=0
+    done
+
+    # Place mines randomly
+    count=0
+    while [ $count -lt $MINES ]; do
+        pos=$((RANDOM % (WIDTH*HEIGHT)))
+        if [ "${board[$pos]}" -eq 0 ]; then
+            board[$pos]=9  # 9 = mine
+            count=$((count + 1))
+        fi
+    done
+
+    # Calculate numbers for each cell
+    for i in $(seq 0 $((WIDTH*HEIGHT-1))); do
+        if [ "${board[$i]}" -eq 9 ]; then
+            continue
+        fi
+
+        # Count adjacent mines
+        count=0
+        row=$((i / WIDTH))
+        col=$((i % WIDTH))
+        for dr in -1 0 1; do
+            for dc in -1 0 1; do
+                nr=$((row + dr))
+                nc=$((col + dc))
+                if [ $nr -lt 0 ] || [ $nr -ge $HEIGHT ] || [ $nc -lt 0 ] || [ $nc -ge $WIDTH ]; then
+                    continue
+                fi
+                idx=$((nr * WIDTH + nc))
+                if [ "${board[$idx]}" -eq 9 ]; then
+                    count=$((count + 1))
+                fi
+            done
+        done
+        board[$i]=$count
+    done
+}
+
+# Print board with revealed cells
+print_board() {
+    echo "   A B C D E"
+    for row in $(seq 0 $((HEIGHT-1))); do
+        printf "%d  " $((row+1))
+        for col in $(seq 0 $((WIDTH-1))); do
+            idx=$((row * WIDTH + col))
+            if [ "${revealed[$idx]}" -eq 1 ]; then
+                cell="${board[$idx]}"
+                if [ "$cell" -eq 9 ]; then
+                    printf "* "
+                elif [ "$cell" -eq 0 ]; then
+                    printf ". "
+                else
+                    printf "%d " "$cell"
+                fi
+            else
+                printf "# "
+            fi
+        done
+        echo
+    done
+}
+
+# Reveal cells recursively if 0
+reveal() {
+    idx=$1
+    if [ "${revealed[$idx]}" -eq 1 ]; then
+        return
+    fi
+    revealed[$idx]=1
+    if [ "${board[$idx]}" -eq 0 ]; then
+        row=$((idx / WIDTH))
+        col=$((idx % WIDTH))
+        for dr in -1 0 1; do
+            for dc in -1 0 1; do
+                nr=$((row + dr))
+                nc=$((col + dc))
+                if [ $nr -lt 0 ] || [ $nr -ge $HEIGHT ] || [ $nc -lt 0 ] || [ $nc -ge $WIDTH ]; then
+                    continue
+                fi
+                nidx=$((nr * WIDTH + nc))
+                reveal $nidx
+            done
+        done
+    fi
+}
+
+# Check win condition
+check_win() {
+    safe_cells=0
+    revealed_count=0
+    for i in $(seq 0 $((WIDTH*HEIGHT-1))); do
+        if [ "${board[$i]}" -ne 9 ]; then
+            safe_cells=$((safe_cells + 1))
+            if [ "${revealed[$i]}" -eq 1 ]; then
+                revealed_count=$((revealed_count + 1))
+            fi
+        fi
+    done
+    [ $safe_cells -eq $revealed_count ]
+}
+
+# Game loop
+init_board
+while true; do
+    print_board
+    echo -n "Enter cell (e.g. A3): "
+    read input
+
+    # Validate input (A-E)(1-5)
+    if ! echo "$input" | grep -Eq '^[A-Ea-e][1-5]$'; then
+        echo "Invalid input. Use column A-E and row 1-5 (e.g. B2)."
+        continue
+    fi
+
+    # Convert input to index
+    col=$(echo "$input" | cut -c1 | tr 'a-e' 'A-E')
+    row=$(echo "$input" | cut -c2)
+    idx=$(coord_to_index "$col$row")
+
+    # Check if mine
+    if [ "${board[$idx]}" -eq 9 ]; then
+        echo "BOOM! You hit a mine. Game over!"
+        # Reveal all mines
+        for i in $(seq 0 $((WIDTH*HEIGHT-1))); do
+            if [ "${board[$i]}" -eq 9 ]; then
+                revealed[$i]=1
+            fi
+        done
+        print_board
+        break
+    fi
+
+    reveal $idx
+
+    if check_win; then
+        print_board
+        echo "Congratulations! You cleared the minefield!"
+        break
+    fi
+done
+

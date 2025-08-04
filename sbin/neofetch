@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Load OS info if available
+if [ -f ./local/os-release ]; then
+    . ./local/os-release
+else
+    PRETTY_NAME="Sam Linux From Scratch"
+    VERSION="0.1.0"
+fi
+
+KERNEL="0.1.0-bash"
+USER="${USER:-root}"
+SHELL="/bin/sh"
+
+cat << EOF
+
+       .---.        ${PRETTY_NAME}
+     .'_:___".
+     |__ --==|      User: $USER
+     [  ]  :[|      Shell: $SHELL
+     |__| I=[|      Kernel: $KERNEL
+     / / ____|
+    |-/.____.'
+   /___\ /___\
+
+EOF
+

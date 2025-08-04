@@ -1,0 +1,4 @@
+NAME="SFS"
+ID=SFS
+os=sfs
+based=linux from scratch
